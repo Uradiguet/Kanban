@@ -1,0 +1,27 @@
+### GET all projects
+GET http://localhost:8080/projects/
+
+###
+
+### Post a new project
+POST http://localhost:8080/projects/
+Content-type: application/json
+
+{
+  "name": "Project 1",
+  "description": "This is project 1"
+}
+
+###
+
+### Get a project by id
+POST http://localhost:8080/projects/
+Content-type: application/json
+
+
+{
+  "name": "Project 2",
+  "description": "This is project 2"
+}
+
+###
