@@ -3,25 +3,33 @@ GET http://localhost:8080/projects/
 
 ###
 
+### Add a new User
+POST http://localhost:8080/users/
+Content-type: application/json
+
+{
+  "login": "User 1",
+  "email": "test@mail.com"
+}
+> {%
+client.global.set("creatorId", response.body.id);
+ %}
+
 ### Post a new project
 POST http://localhost:8080/projects/
 Content-type: application/json
 
 {
-  "name": "Project 1",
-  "description": "This is project 1"
+  "name": "Project 3",
+  "description": "This is project 3",
+  "creatorId": {{creatorId}}
 }
 
 ###
 
-### Get a project by id
-POST http://localhost:8080/projects/
-Content-type: application/json
+### Add a user in a existing project
 
+PATCH http://localhost:8080/projects/1/users
+Content-Type: application/json
 
-{
-  "name": "Project 2",
-  "description": "This is project 2"
-}
-
-###
+['']
