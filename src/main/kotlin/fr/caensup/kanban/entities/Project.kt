@@ -11,22 +11,26 @@ import java.util.UUID
 
 @Entity
 open class Project(
-    @Id
-    open var id: UUID = UUID.randomUUID(),
 
-    @Column(length = 120, nullable = false)
-    open var name: String ?= null,
-
-    @Column(length = 255)
-    open var description: String ?= null,
+    id: UUID = UUID.randomUUID(),
+    name: String? = null,
+    description: String? = null,
 
     @ManyToOne(optional = false)
     open var creator: User
 
+):baseWithName(
+
+    id = id,
+    name = name,
+    description = description
+
 ) {
+
     @Column(nullable = false)
     open var createAt:Date = Date()
 
     @ManyToMany
     open var members: MutableList<User> = mutableListOf()
+
 }
