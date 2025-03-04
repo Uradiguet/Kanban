@@ -1,5 +1,8 @@
 package fr.caensup.kanban.entities
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
@@ -29,8 +32,10 @@ open class User(
     open var lastname: String ?= null
 ) {
     @OneToMany(mappedBy = "creator")
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
     open var myProjects: MutableList<Project> = mutableListOf()
 
     @ManyToMany(mappedBy = "members")
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
     open var projects: MutableList<Project> = mutableListOf()
 }

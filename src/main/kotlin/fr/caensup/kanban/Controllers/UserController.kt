@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.RestController
 class UserController(
     private val userService: UserService
 ) {
-    @GetMapping(path = ["/user"])
+    @GetMapping(path = ["/"])
     fun findAll() = userService.findAll()
 
-    @PostMapping(path = ["/user"])
+    @PostMapping(path = ["/"])
     fun save(@RequestBody user: UserDto) = userService.save(user)
 }
