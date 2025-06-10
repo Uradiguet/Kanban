@@ -1,14 +1,38 @@
 package fr.caensup.kanban.entities
 
-import com.fasterxml.jackson.databind.ser.Serializers.Base
-import jakarta.persistence.CascadeType
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
-import jakarta.persistence.ManyToMany
-import jakarta.persistence.ManyToOne
-import java.util.Date
-import java.util.UUID
+import jakarta.persistence.*
+import java.time.LocalDateTime
+import java.util.*
 
 @Entity
-open class Board:BaseWithName()
+class Board(
+    id: UUID = UUID.randomUUID(),
+    name: String? = null,
+    description: String? = null,
+
+    // AJOUT: Champ color pour l'UI
+    @Column(nullable = false)
+    var color: String = "bg-gray-100 border-gray-300",
+
+    // AJOUT: Position pour l'ordre des colonnes
+    @Column(nullable = false)
+    var position: Int = 0,
+
+    // AJOUT: Relation avec Project
+    @ManyToOne
+    @JoinColumn(name = "project_id")
+    var project: Project? = null,
+
+    // AJOUT: Relation avec les tâches
+    @OneToMany(mappedBy = "board", cascade = [CascadeType.ALL], orphanRemoval = true)
+    var tasks: MutableList<Task> = mutableListOf(),
+
+    // AJOUT: Timestamps
+    var createdAt: LocalDateTime = LocalDateTime.now(),
+    var updatedAt: LocalDateTime = LocalDateTime.now()
+
+) : BaseWithName(
+    id = id,
+    name = name,
+    description = description
+)
