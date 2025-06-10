@@ -1,9 +1,7 @@
+// src/main/kotlin/fr/caensup/kanban/services/TaskService.kt
 package fr.caensup.kanban.services
 
-import fr.caensup.kanban.dtos.TaskDto
-import fr.caensup.kanban.entities.Priority
 import fr.caensup.kanban.entities.Task
-import fr.caensup.kanban.repositories.BoardRepository
 import fr.caensup.kanban.repositories.TaskRepository
 import fr.caensup.kanban.repositories.UserRepository
 import org.springframework.stereotype.Service
@@ -13,80 +11,77 @@ import java.util.*
 @Service
 class TaskService(
     private val taskRepository: TaskRepository,
-    private val userRepository: UserRepository,
-    private val boardRepository: BoardRepository
+    private val userRepository: UserRepository
 ) {
 
-    fun findAll() = taskRepository.findAll()
-
-    fun findById(id: UUID) = taskRepository.findById(id).orElse(null)
-
-    fun existsById(id: UUID) = taskRepository.existsById(id)
-
-    fun save(taskDto: TaskDto): Task {
-        val task = if (taskDto.id != null) {
-            // Mise à jour
-            taskRepository.findById(taskDto.id!!).orElse(Task(title = "")).apply {
-                title = taskDto.title ?: ""
-                description = taskDto.description
-                priority = taskDto.priority
-                dueDate = taskDto.dueDate
-                updatedAt = LocalDateTime.now()
-                
-                // Mise à jour du board si fourni
-                if (taskDto.boardId != null && taskDto.boardId != board?.id) {
-                    board = boardRepository.findById(taskDto.boardId!!).orElse(null)
-                }
-                
-                // Mise à jour des utilisateurs assignés
-                assignedUsers.clear()
-                taskDto.assignedUsers?.let { userIds ->
-                    assignedUsers.addAll(userRepository.findAllById(userIds))
-                }
-            }
-        } else {
-            // Création
-            Task(
-                title = taskDto.title ?: "",
-                description = taskDto.description,
-                priority = taskDto.priority,
-                dueDate = taskDto.dueDate,
-                board = taskDto.boardId?.let { boardRepository.findById(it).orElse(null) }
-            ).apply {
-                // Assignation des utilisateurs
-                taskDto.assignedUsers?.let { userIds ->
-                    assignedUsers.addAll(userRepository.findAllById(userIds))
-                }
-            }
+    fun findAll(): List<Task> {
+        return try {
+            taskRepository.findAll()
+        } catch (e: Exception) {
+            println("❌ Erreur findAll tasks: ${e.message}")
+            emptyList()
         }
-        
-        return taskRepository.save(task)
     }
 
-    fun deleteById(id: UUID) = taskRepository.deleteById(id)
-
-    fun assignUsers(taskId: UUID, userIds: List<UUID>): Task {
-        val task = taskRepository.findById(taskId)
-            .orElseThrow { RuntimeException("Task not found with id: $taskId") }
-        
-        val users = userRepository.findAllById(userIds)
-        task.assignedUsers.clear()
-        task.assignedUsers.addAll(users)
-        task.updatedAt = LocalDateTime.now()
-        
-        return taskRepository.save(task)
+    fun findById(id: UUID): Task? {
+        return try {
+            taskRepository.findById(id).orElse(null)
+        } catch (e: Exception) {
+            println("❌ Erreur findById task: ${e.message}")
+            null
+        }
     }
 
-    fun moveTask(taskId: UUID, toBoardId: UUID): Task {
-        val task = taskRepository.findById(taskId)
-            .orElseThrow { RuntimeException("Task not found with id: $taskId") }
-        
-        val toBoard = boardRepository.findById(toBoardId)
-            .orElseThrow { RuntimeException("Board not found with id: $toBoardId") }
-        
-        task.board = toBoard
-        task.updatedAt = LocalDateTime.now()
-        
-        return taskRepository.save(task)
+    fun existsById(id: UUID): Boolean {
+        return try {
+            taskRepository.existsById(id)
+        } catch (e: Exception) {
+            println("❌ Erreur existsById task: ${e.message}")
+            false
+        }
+    }
+
+    fun save(task: Task): Task {
+        return try {
+            task.updatedAt = LocalDateTime.now()
+            val saved = taskRepository.save(task)
+            println("✅ Task sauvée: ${saved.id}")
+            saved
+        } catch (e: Exception) {
+            println("❌ Erreur save task: ${e.message}")
+            e.printStackTrace()
+            throw e
+        }
+    }
+
+    fun deleteById(id: UUID) {
+        try {
+            taskRepository.deleteById(id)
+            println("✅ Task supprimée: $id")
+        } catch (e: Exception) {
+            println("❌ Erreur delete task: ${e.message}")
+            throw e
+        }
+    }
+
+    fun assignUsersToTask(task: Task, userIds: List<UUID>) {
+        try {
+            val users = userRepository.findAllById(userIds)
+            task.assignedUsers.clear()
+            task.assignedUsers.addAll(users)
+            println("✅ ${users.size} utilisateurs assignés à la tâche ${task.id}")
+        } catch (e: Exception) {
+            println("❌ Erreur assignation utilisateurs: ${e.message}")
+            // Ne pas planter, juste logger l'erreur
+        }
+    }
+
+    fun getTasksByBoardId(boardId: UUID): List<Task> {
+        return try {
+            findAll().filter { it.boardId == boardId }
+        } catch (e: Exception) {
+            println("❌ Erreur getTasksByBoardId: ${e.message}")
+            emptyList()
+        }
     }
 }

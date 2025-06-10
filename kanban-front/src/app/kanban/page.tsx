@@ -1,4 +1,4 @@
-import KanbanComponent from "@/components/kanban/KanbanComponent";
+import KanbanComponent from "@/components/kanban/kanbanComponent";
 import KanbanService from "@/services/KanbanService";
 import HttpService from "@/services/HttpService";
 import API_URLS from "@/constants/ApiUrls";

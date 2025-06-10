@@ -5,34 +5,38 @@ import java.time.LocalDateTime
 import java.util.*
 
 @Entity
-class Board(
-    id: UUID = UUID.randomUUID(),
-    name: String? = null,
-    description: String? = null,
+@Table(name = "board")
+class Board {
+    @Id
+    var id: UUID = UUID.randomUUID()
 
-    // AJOUT: Champ color pour l'UI
     @Column(nullable = false)
-    var color: String = "bg-gray-100 border-gray-300",
+    var name: String = ""
 
-    // AJOUT: Position pour l'ordre des colonnes
+    @Column(length = 500)
+    var description: String? = null
+
     @Column(nullable = false)
-    var position: Int = 0,
+    var color: String = "bg-gray-100 border-gray-300"
 
-    // AJOUT: Relation avec Project
-    @ManyToOne
-    @JoinColumn(name = "project_id")
-    var project: Project? = null,
+    @Column(nullable = false)
+    var position: Int = 0
 
-    // AJOUT: Relation avec les tâches
-    @OneToMany(mappedBy = "board", cascade = [CascadeType.ALL], orphanRemoval = true)
-    var tasks: MutableList<Task> = mutableListOf(),
-
-    // AJOUT: Timestamps
-    var createdAt: LocalDateTime = LocalDateTime.now(),
+    var createdAt: LocalDateTime = LocalDateTime.now()
     var updatedAt: LocalDateTime = LocalDateTime.now()
 
-) : BaseWithName(
-    id = id,
-    name = name,
-    description = description
-)
+    // Constructeurs
+    constructor()
+
+    constructor(
+        name: String = "",
+        description: String? = null,
+        color: String = "bg-gray-100 border-gray-300",
+        position: Int = 0
+    ) {
+        this.name = name
+        this.description = description
+        this.color = color
+        this.position = position
+    }
+}
