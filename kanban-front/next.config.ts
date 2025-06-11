@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 const isProd = process.env.NODE_ENV === 'production';
 const repoName = 'Kanban'; // Remplacez par le nom exact de votre repository
 
+// @ts-ignore
 const nextConfig: NextConfig = {
     // Configuration pour l'export statique
     output: 'export',
@@ -26,6 +27,11 @@ const nextConfig: NextConfig = {
     },
     typescript: {
         ignoreBuildErrors: true,
+    },
+
+    // IMPORTANT: Désactiver les appels d'API lors du build statique
+    experimental: {
+        missingSuspenseWithCSRBailout: false,
     },
 };
 

@@ -12,9 +12,9 @@ const getKanbanData = async () => {
         ]);
 
         return {
-            boards: boardsResponse.status === 200 ? boardsResponse.data : [],
-            tasks: tasksResponse.status === 200 ? tasksResponse.data : [],
-            users: usersResponse.status === 200 ? usersResponse.data : []
+            boards: (boardsResponse.status === 200 && boardsResponse.data) ? boardsResponse.data : [],
+            tasks: (tasksResponse.status === 200 && tasksResponse.data) ? tasksResponse.data : [],
+            users: (usersResponse.status === 200 && usersResponse.data) ? usersResponse.data : []
         };
     } catch (error) {
         console.error('Erreur lors du chargement des données Kanban:', error);
@@ -28,12 +28,12 @@ const getKanbanData = async () => {
 
 export default async function KanbanPage() {
     const { boards, tasks, users } = await getKanbanData();
-    
+
     return (
-        <KanbanComponent 
-            initialBoards={boards} 
-            initialTasks={tasks} 
-            users={users} 
+        <KanbanComponent
+            initialBoards={boards}
+            initialTasks={tasks}
+            users={users}
         />
     );
 }
