@@ -3,8 +3,6 @@ name: Deploy Next.js to GitHub Pages
 on:
   push:
     branches: [ main ]  # ou master selon votre branche principale
-  pull_request:
-    branches: [ main ]
 
 permissions:
   contents: read
@@ -18,6 +16,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./kanban-front
+        
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,6 +29,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: './kanban-front/package-lock.json'
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -35,11 +38,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: ./kanban-front
 
       - name: Build with Next.js
         run: npm run build
-        working-directory: ./kanban-front
         env:
           NODE_ENV: production
 
