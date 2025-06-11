@@ -1,51 +1,49 @@
 package fr.caensup.kanban.entities
 
 import jakarta.persistence.*
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 
 @Entity
-@Table(name = "task")
-class Task {
+class Task(
     @Id
-    var id: UUID = UUID.randomUUID()
+    var id: UUID = UUID.randomUUID(),
 
+    // CHANGEMENT: "name" -> "title" pour correspondre au frontend
     @Column(nullable = false)
-    var title: String = ""
+    var title: String,
 
     @Column(length = 1000)
-    var description: String? = null
+    var description: String? = null,
 
-    @Column(nullable = false)
-    var priority: String = "medium"
+    // AJOUT: Champ priority manquant
+    @Enumerated(EnumType.STRING)
+    var priority: Priority = Priority.MEDIUM,
 
-    var dueDate: String? = null
+    // AJOUT: Date d'échéance
+    var dueDate: LocalDate? = null,
 
-    @Column(name = "board_id")
-    var boardId: UUID? = null
+    // AJOUT: Relation avec Board
+    @ManyToOne
+    @JoinColumn(name = "board_id")
+    var board: Board? = null,
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    // CHANGEMENT: assignedMembers -> assignedUsers + correction de la relation
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "task_assigned_users",
         joinColumns = [JoinColumn(name = "task_id")],
         inverseJoinColumns = [JoinColumn(name = "user_id")]
     )
-    var assignedUsers: MutableList<User> = mutableListOf()
+    var assignedUsers: MutableList<User> = mutableListOf(),
 
-    var createdAt: LocalDateTime = LocalDateTime.now()
+    // AJOUT: Timestamps
+    var createdAt: LocalDateTime = LocalDateTime.now(),
     var updatedAt: LocalDateTime = LocalDateTime.now()
+)
 
-    constructor()
-
-    constructor(
-        title: String,
-        description: String? = null,
-        priority: String = "medium",
-        boardId: UUID? = null
-    ) {
-        this.title = title
-        this.description = description
-        this.priority = priority
-        this.boardId = boardId
-    }
+// AJOUT: Enum pour les priorités
+enum class Priority {
+    LOW, MEDIUM, HIGH
 }
