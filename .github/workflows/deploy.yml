@@ -2,7 +2,7 @@ name: Deploy Next.js to GitHub Pages
 
 on:
   push:
-    branches: [ main ]  # ou master selon votre branche principale
+    branches: [ main ]  # ✅ Vérifiez que c'est bien votre branche principale
 
 permissions:
   contents: read
@@ -42,7 +42,7 @@ jobs:
       - name: Build with Next.js
         run: npm run build
         env:
-          NODE_ENV: production
+          NODE_ENV: production  # ✅ Important pour activer la config production
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
