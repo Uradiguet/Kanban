@@ -2,7 +2,7 @@
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === 'production';
-const repoName = 'Project-CEC'; // Remplacez par le nom exact de votre repository
+const repoName = 'Kanban'; // Remplacez par le nom exact de votre repository
 
 const nextConfig: NextConfig = {
     // Configuration pour l'export statique
