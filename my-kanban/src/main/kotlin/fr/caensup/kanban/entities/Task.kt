@@ -27,6 +27,7 @@ class Task(
     // AJOUT: Relation avec Board
     @ManyToOne
     @JoinColumn(name = "board_id")
+    @com.fasterxml.jackson.annotation.JsonBackReference
     var board: Board? = null,
 
     // CHANGEMENT: assignedMembers -> assignedUsers + correction de la relation

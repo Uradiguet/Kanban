@@ -2,6 +2,7 @@ package fr.caensup.kanban.services
 
 import fr.caensup.kanban.dtos.BoardDto
 import fr.caensup.kanban.entities.Board
+import fr.caensup.kanban.entities.Task
 import fr.caensup.kanban.repositories.BoardRepository
 import fr.caensup.kanban.repositories.ProjectRepository
 import org.springframework.stereotype.Service
@@ -14,7 +15,7 @@ class BoardService(
     private val projectRepository: ProjectRepository
 ) {
 
-    fun findAll() = boardRepository.findAll()
+    fun findAll(): List<BoardDto> = boardRepository.findAll().map { boardToDto(it) }
 
     fun findById(id: UUID) = boardRepository.findById(id).orElse(null)
 
@@ -29,7 +30,7 @@ class BoardService(
                 color = boardDto.color
                 position = boardDto.position
                 updatedAt = LocalDateTime.now()
-                
+
                 // Mise à jour du projet si fourni
                 if (boardDto.projectId != null && boardDto.projectId != project?.id) {
                     project = projectRepository.findById(boardDto.projectId!!).orElse(null)
@@ -45,14 +46,14 @@ class BoardService(
                 project = boardDto.projectId?.let { projectRepository.findById(it).orElse(null) }
             )
         }
-        
+
         return boardRepository.save(board)
     }
 
     fun deleteById(id: UUID) = boardRepository.deleteById(id)
 
-    fun getBoardTasks(boardId: UUID): List<*> {
-        return findById(boardId)?.tasks ?: emptyList<Any>()
+    fun getBoardTasks(boardId: UUID): List<Task> {
+        return findById(boardId)?.tasks ?: emptyList()
     }
 
     private fun dtoToBoard(dto: BoardDto): Board {
@@ -63,6 +64,19 @@ class BoardService(
             color = dto.color,
             position = dto.position,
             project = dto.projectId?.let { projectRepository.findById(it).orElse(null) }
+        )
+    }
+
+    private fun boardToDto(board: Board): BoardDto {
+        return BoardDto(
+            id = board.id,
+            title = board.name,
+            description = board.description,
+            color = board.color,
+            position = board.position,
+            projectId = board.project?.id,
+            createdAt = board.createdAt,
+            updatedAt = board.updatedAt
         )
     }
 }

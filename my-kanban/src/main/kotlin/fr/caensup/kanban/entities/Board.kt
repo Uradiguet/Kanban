@@ -25,6 +25,7 @@ class Board(
 
     // AJOUT: Relation avec les tâches
     @OneToMany(mappedBy = "board", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonManagedReference
     var tasks: MutableList<Task> = mutableListOf(),
 
     // AJOUT: Timestamps

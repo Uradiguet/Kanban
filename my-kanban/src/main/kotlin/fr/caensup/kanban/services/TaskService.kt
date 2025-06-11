@@ -17,7 +17,7 @@ class TaskService(
     private val boardRepository: BoardRepository
 ) {
 
-    fun findAll() = taskRepository.findAll()
+    fun findAll(): List<TaskDto> = taskRepository.findAll().map { taskToDto(it) }
 
     fun findById(id: UUID) = taskRepository.findById(id).orElse(null)
 
@@ -46,12 +46,17 @@ class TaskService(
             }
         } else {
             // Création
+            if (taskDto.boardId == null) {
+                throw IllegalArgumentException("boardId is required")
+            }
+            val board = boardRepository.findById(taskDto.boardId!!)
+                .orElseThrow { IllegalArgumentException("Board not found with id: ${taskDto.boardId}") }
             Task(
                 title = taskDto.title ?: "",
                 description = taskDto.description,
                 priority = taskDto.priority,
                 dueDate = taskDto.dueDate,
-                board = taskDto.boardId?.let { boardRepository.findById(it).orElse(null) }
+                board = board
             ).apply {
                 // Assignation des utilisateurs
                 taskDto.assignedUsers?.let { userIds ->
@@ -88,5 +93,19 @@ class TaskService(
         task.updatedAt = LocalDateTime.now()
         
         return taskRepository.save(task)
+    }
+
+    private fun taskToDto(task: Task): TaskDto {
+        return TaskDto(
+            id = task.id,
+            title = task.title,
+            description = task.description,
+            priority = task.priority,
+            dueDate = task.dueDate,
+            boardId = task.board?.id,
+            assignedUsers = task.assignedUsers.map { it.id!! },
+            createdAt = task.createdAt,
+            updatedAt = task.updatedAt
+        )
     }
 }

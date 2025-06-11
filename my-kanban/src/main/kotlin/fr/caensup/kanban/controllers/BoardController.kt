@@ -1,6 +1,7 @@
 package fr.caensup.kanban.controllers
 
 import fr.caensup.kanban.dtos.BoardDto
+import fr.caensup.kanban.entities.Board
 import fr.caensup.kanban.services.BoardService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -25,7 +26,7 @@ class BoardController(private val boardService: BoardService) {
         ResponseEntity(boardService.save(boardDto), HttpStatus.CREATED)
 
     @PutMapping("/{id}")
-    fun updateBoard(@PathVariable id: UUID, @RequestBody boardDto: BoardDto): ResponseEntity<*> {
+    fun updateBoard(@PathVariable id: UUID, @RequestBody boardDto: BoardDto): ResponseEntity<Board> {
         return if (boardService.existsById(id)) {
             boardDto.id = id
             ResponseEntity.ok(boardService.save(boardDto))

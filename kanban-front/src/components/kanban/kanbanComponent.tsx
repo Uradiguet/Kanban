@@ -457,9 +457,9 @@ export default function KanbanComponent({
                                 initialValue="medium"
                             >
                                 <Select>
-                                    <Option value="low">Basse</Option>
-                                    <Option value="medium">Moyenne</Option>
-                                    <Option value="high">Haute</Option>
+                                    <Option value="LOW">Basse</Option>
+                                    <Option value="MEDIUM">Moyenne</Option>
+                                    <Option value="HIGH">Haute</Option>
                                 </Select>
                             </Form.Item>
 

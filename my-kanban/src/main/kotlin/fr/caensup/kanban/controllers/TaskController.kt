@@ -3,6 +3,7 @@ package fr.caensup.kanban.controllers
 import fr.caensup.kanban.dtos.AssignTaskRequest
 import fr.caensup.kanban.dtos.MoveTaskRequest
 import fr.caensup.kanban.dtos.TaskDto
+import fr.caensup.kanban.entities.Task
 import fr.caensup.kanban.services.TaskService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -27,7 +28,7 @@ class TaskController(private val taskService: TaskService) {
         ResponseEntity(taskService.save(taskDto), HttpStatus.CREATED)
 
     @PutMapping("/{id}")
-    fun updateTask(@PathVariable id: UUID, @RequestBody taskDto: TaskDto): ResponseEntity<*> {
+    fun updateTask(@PathVariable id: UUID, @RequestBody taskDto: TaskDto): ResponseEntity<Task> {
         return if (taskService.existsById(id)) {
             taskDto.id = id
             ResponseEntity.ok(taskService.save(taskDto))
@@ -50,7 +51,7 @@ class TaskController(private val taskService: TaskService) {
     fun assignUsersToTask(
         @PathVariable id: UUID,
         @RequestBody request: AssignTaskRequest
-    ): ResponseEntity<*> {
+    ): ResponseEntity<Task> {
         return try {
             ResponseEntity.ok(taskService.assignUsers(id, request.users))
         } catch (e: Exception) {
@@ -62,7 +63,7 @@ class TaskController(private val taskService: TaskService) {
     fun moveTask(
         @PathVariable id: UUID,
         @RequestBody request: MoveTaskRequest
-    ): ResponseEntity<*> {
+    ): ResponseEntity<Any> {
         return try {
             ResponseEntity.ok(taskService.moveTask(id, request.toBoardId))
         } catch (e: Exception) {
