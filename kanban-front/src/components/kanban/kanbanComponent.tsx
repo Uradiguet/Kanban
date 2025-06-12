@@ -31,6 +31,7 @@ import Task from '@/models/Task';
 import Board from '@/models/Board';
 import User from '@/models/User';
 import dayjs from 'dayjs';
+import TaskFormComponent from './TaskFormComponent';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -62,7 +63,6 @@ export default function KanbanComponent({
     const [draggedFrom, setDraggedFrom] = useState<string | null>(null);
 
     // Forms
-    const [taskForm] = Form.useForm();
     const [boardForm] = Form.useForm();
 
     const priorityColors = {
@@ -135,6 +135,26 @@ export default function KanbanComponent({
             return;
         }
 
+        // Vérifier si la tâche est bloquée par des dépendances
+        const blockingTasks = draggedTask.dependencies
+            .map(dep => tasks.find(t => t.id === dep.targetTaskId))
+            .filter(t => t && t.status !== 'DONE');
+        const isBlocked = blockingTasks.length > 0;
+
+        // Si la tâche est bloquée et qu'on essaie de la déplacer vers "En cours" ou "Terminé"
+        if (isBlocked) {
+            const targetBoard = boards.find(b => b.id === toBoardId);
+            if (targetBoard && (targetBoard.title === 'En cours' || targetBoard.title === 'Terminé')) {
+                const blockingNames = blockingTasks.map(t => t.title).join(', ');
+                setTimeout(() => {
+                  message.error(`Cette tâche ne peut pas être déplacée car elle dépend de : ${blockingNames}`);
+                }, 100);
+                setDraggedTask(null);
+                setDraggedFrom(null);
+                return;
+            }
+        }
+
         try {
             const response = await KanbanService.moveTask(
                 draggedTask.id!,
@@ -143,58 +163,228 @@ export default function KanbanComponent({
             );
 
             if (response.status === 200) {
+                // Mettre à jour le statut de la tâche en fonction du tableau de destination
+                const targetBoard = boards.find(b => b.id === toBoardId);
+                let newStatus: 'TODO' | 'IN_PROGRESS' | 'DONE' = 'TODO';
+                
+                if (targetBoard) {
+                    if (targetBoard.title === 'En cours') {
+                        newStatus = 'IN_PROGRESS';
+                    } else if (targetBoard.title === 'Terminé') {
+                        newStatus = 'DONE';
+                    }
+                }
+
+                // Mettre à jour le statut de la tâche
+                await KanbanService.updateTaskStatus(draggedTask.id!, newStatus);
+
+                // Mettre à jour l'état local
                 setTasks(prevTasks => 
-                    prevTasks.map(task => 
-                        task.id === draggedTask.id 
-                            ? { ...task, boardId: toBoardId }
-                            : task
-                    )
+                    prevTasks.map(task => {
+                        if (task.id === draggedTask.id) {
+                            const updatedTask = new Task();
+                            Object.assign(updatedTask, {
+                                ...task,
+                                boardId: toBoardId,
+                                status: newStatus
+                            });
+                            return updatedTask;
+                        }
+                        return task;
+                    })
                 );
+
+                // Vérifier si d'autres tâches peuvent maintenant être débloquées
+                const updatedTasks = tasks.map(task => {
+                    if (task.id === draggedTask.id) {
+                        const updatedTask = new Task();
+                        Object.assign(updatedTask, {
+                            ...task,
+                            boardId: toBoardId,
+                            status: newStatus
+                        });
+                        return updatedTask;
+                    }
+                    return task;
+                });
+
+                // Notifier les utilisateurs des tâches débloquées
+                const newlyUnblockedTasks = updatedTasks.filter(task => {
+                    const wasBlocked = task.dependencies.some(dep => {
+                        const dependentTask = tasks.find(t => t.id === dep.targetTaskId);
+                        return dependentTask && dependentTask.status !== 'DONE';
+                    });
+                    const isNowUnblocked = !task.dependencies.some(dep => {
+                        const dependentTask = updatedTasks.find(t => t.id === dep.targetTaskId);
+                        return dependentTask && dependentTask.status !== 'DONE';
+                    });
+                    return wasBlocked && isNowUnblocked;
+                });
+
+                if (newlyUnblockedTasks.length > 0) {
+                    message.success(`${newlyUnblockedTasks.length} tâche(s) peuvent maintenant commencer !`);
+                }
+
                 message.success('Tâche déplacée avec succès');
             }
-        } catch (error) {
-            message.error('Erreur lors du déplacement de la tâche');
+        } catch (error: any) {
+            console.error('Erreur lors du déplacement de la tâche:', error);
+            let msg = error.message;
+            if (msg && msg.startsWith('Erreur lors du déplacement:')) {
+                msg = msg.replace('Erreur lors du déplacement:', '').trim();
+            }
+            message.error(msg || 'Erreur lors du déplacement de la tâche');
+            setDraggedTask(null);
+            setDraggedFrom(null);
         }
-
-        setDraggedTask(null);
-        setDraggedFrom(null);
     };
 
     const handleCreateTask = async (values: any) => {
+        console.log('Creating task with values:', values);
+        setLoading(true);
         try {
+            // Vérifier les dépendances avant de créer la tâche
+            if (values.dependencies && values.dependencies.length > 0) {
+                const incompleteDependencies = values.dependencies.filter((depId: string) => {
+                    const dependencyTask = tasks.find(t => t.id === depId);
+                    return dependencyTask && dependencyTask.status !== 'DONE';
+                });
+
+                if (incompleteDependencies.length > 0 && values.status === 'IN_PROGRESS') {
+                    message.error('Impossible de créer la tâche en cours car certaines dépendances ne sont pas terminées');
+                    setLoading(false);
+                    return;
+                }
+            }
+
             const taskData = {
                 ...values,
                 boardId: selectedBoardId,
-                dueDate: values.dueDate ? values.dueDate.format('YYYY-MM-DD') : null,
-                assignedUsers: values.assignedUsers || []
+                dueDate: values.dueDate
+                  ? (typeof values.dueDate.format === 'function'
+                      ? values.dueDate.format('YYYY-MM-DD')
+                      : values.dueDate)
+                  : null,
+                assignedUsers: values.assignedUsers || [],
+                status: values.status || 'TODO'
             };
 
+            console.log('Sending task data to API:', taskData);
             const response = await KanbanService.createTask(taskData);
+            console.log('API response:', response);
             
             if (response.status === 201 && response.data) {
+                // Ajouter les dépendances après la création de la tâche
+                if (values.dependencies && values.dependencies.length > 0) {
+                    try {
+                        await Promise.all(values.dependencies.map((targetTaskId: string) =>
+                            KanbanService.addDependency(response.data.id!, targetTaskId)
+                        ));
+                        // Récupérer la tâche mise à jour avec les dépendances
+                        const updatedTaskResponse = await KanbanService.getTasks();
+                        if (updatedTaskResponse.status === 200 && updatedTaskResponse.data) {
+                            const updatedTask = updatedTaskResponse.data.find(t => t.id === response.data.id);
+                            if (updatedTask) {
+                                setTasks(prev => [...prev.filter(t => t.id !== response.data.id), updatedTask]);
+                                message.success('Tâche créée avec succès');
+                                setShowTaskModal(false);
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error adding dependencies:', error);
+                        message.error('Erreur lors de l\'ajout des dépendances');
+                        setLoading(false);
+                        return;
+                    }
+                }
                 setTasks(prev => [...prev, response.data]);
                 message.success('Tâche créée avec succès');
                 setShowTaskModal(false);
-                taskForm.resetFields();
+            } else {
+                console.error('Error creating task:', response);
+                message.error('Erreur lors de la création de la tâche');
             }
         } catch (error) {
+            console.error('Error in handleCreateTask:', error);
             message.error('Erreur lors de la création de la tâche');
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleUpdateTask = async (values: any) => {
+        console.log('Updating task with values:', values);
         if (!editingTask) return;
-
+        setLoading(true);
         try {
+            // Vérifier les dépendances avant de mettre à jour la tâche
+            if (values.dependencies && values.dependencies.length > 0) {
+                const incompleteDependencies = values.dependencies.filter((depId: string) => {
+                    const dependencyTask = tasks.find(t => t.id === depId);
+                    return dependencyTask && dependencyTask.status !== 'DONE';
+                });
+
+                if (incompleteDependencies.length > 0 && values.status === 'IN_PROGRESS') {
+                    message.error('Impossible de mettre la tâche en cours car certaines dépendances ne sont pas terminées');
+                    setLoading(false);
+                    return;
+                }
+            }
+
             const taskData = {
                 ...values,
-                dueDate: values.dueDate ? values.dueDate.format('YYYY-MM-DD') : null,
-                assignedUsers: values.assignedUsers || []
+                dueDate: values.dueDate
+                  ? (typeof values.dueDate.format === 'function'
+                      ? values.dueDate.format('YYYY-MM-DD')
+                      : values.dueDate)
+                  : null,
+                assignedUsers: values.assignedUsers || [],
+                status: values.status || editingTask.status
             };
 
+            console.log('Sending task data to API:', taskData);
             const response = await KanbanService.updateTask(editingTask.id!, taskData);
+            console.log('API response:', response);
             
             if (response.status === 200 && response.data) {
+                // Mettre à jour les dépendances
+                if (values.dependencies) {
+                    try {
+                        // Supprimer toutes les dépendances existantes
+                        const currentDependencies = editingTask.dependencies.map(dep => dep.targetTaskId);
+                        await Promise.all(currentDependencies.map(targetTaskId =>
+                            KanbanService.removeDependency(editingTask.id!, targetTaskId)
+                        ));
+
+                        // Ajouter les nouvelles dépendances
+                        await Promise.all(values.dependencies.map((targetTaskId: string) =>
+                            KanbanService.addDependency(editingTask.id!, targetTaskId)
+                        ));
+
+                        // Récupérer la tâche mise à jour avec les dépendances
+                        const updatedTaskResponse = await KanbanService.getTasks();
+                        if (updatedTaskResponse.status === 200 && updatedTaskResponse.data) {
+                            const updatedTask = updatedTaskResponse.data.find(t => t.id === editingTask.id);
+                            if (updatedTask) {
+                                setTasks(prev => 
+                                    prev.map(task => 
+                                        task.id === editingTask.id ? updatedTask : task
+                                    )
+                                );
+                                message.success('Tâche mise à jour avec succès');
+                                setEditingTask(null);
+                                setShowTaskModal(false);
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error updating dependencies:', error);
+                        message.error('Erreur lors de la mise à jour des dépendances');
+                        setLoading(false);
+                        return;
+                    }
+                }
                 setTasks(prev => 
                     prev.map(task => 
                         task.id === editingTask.id ? response.data : task
@@ -202,10 +392,16 @@ export default function KanbanComponent({
                 );
                 message.success('Tâche mise à jour avec succès');
                 setEditingTask(null);
-                taskForm.resetFields();
+                setShowTaskModal(false);
+            } else {
+                console.error('Error updating task:', response);
+                message.error('Erreur lors de la mise à jour de la tâche');
             }
         } catch (error) {
+            console.error('Error in handleUpdateTask:', error);
             message.error('Erreur lors de la mise à jour de la tâche');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -255,13 +451,8 @@ export default function KanbanComponent({
         setSelectedBoardId(boardId);
         if (task) {
             setEditingTask(task);
-            taskForm.setFieldsValue({
-                ...task,
-                dueDate: task.dueDate ? dayjs(task.dueDate) : null
-            });
         } else {
             setEditingTask(null);
-            taskForm.resetFields();
         }
         setShowTaskModal(true);
     };
@@ -430,73 +621,14 @@ export default function KanbanComponent({
                     footer={null}
                     width={600}
                 >
-                    <Form
-                        form={taskForm}
-                        layout="vertical"
-                        onFinish={editingTask ? handleUpdateTask : handleCreateTask}
-                    >
-                        <Form.Item
-                            name="title"
-                            label="Titre"
-                            rules={[{ required: true, message: 'Le titre est requis' }]}
-                        >
-                            <Input placeholder="Titre de la tâche" />
-                        </Form.Item>
-
-                        <Form.Item
-                            name="description"
-                            label="Description"
-                        >
-                            <TextArea rows={3} placeholder="Description de la tâche" />
-                        </Form.Item>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <Form.Item
-                                name="priority"
-                                label="Priorité"
-                                initialValue="medium"
-                            >
-                                <Select>
-                                    <Option value="LOW">Basse</Option>
-                                    <Option value="MEDIUM">Moyenne</Option>
-                                    <Option value="HIGH">Haute</Option>
-                                </Select>
-                            </Form.Item>
-
-                            <Form.Item
-                                name="dueDate"
-                                label="Date d'échéance"
-                            >
-                                <DatePicker style={{ width: '100%' }} />
-                            </Form.Item>
-                        </div>
-
-                        <Form.Item
-                            name="assignedUsers"
-                            label="Assigné à"
-                        >
-                            <Select
-                                mode="multiple"
-                                placeholder="Sélectionner des utilisateurs"
-                                optionFilterProp="children"
-                            >
-                                {projectUsers.map(user => (
-                                    <Option key={user.id} value={user.id!}>
-                                        {user.firstname} {user.lastname} ({user.username})
-                                    </Option>
-                                ))}
-                            </Select>
-                        </Form.Item>
-
-                        <div className="flex gap-2 justify-end">
-                            <Button onClick={() => setShowTaskModal(false)}>
-                                Annuler
-                            </Button>
-                            <Button type="primary" htmlType="submit">
-                                {editingTask ? 'Modifier' : 'Créer'}
-                            </Button>
-                        </div>
-                    </Form>
+                    <TaskFormComponent
+                        task={editingTask}
+                        users={projectUsers}
+                        allTasks={tasks}
+                        onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
+                        onCancel={() => setShowTaskModal(false)}
+                        loading={loading}
+                    />
                 </Modal>
 
                 {/* Board Modal */}

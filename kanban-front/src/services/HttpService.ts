@@ -18,7 +18,7 @@ export default class HttpService {
         }
     }
 
-    private static async request<T = any>(url: string, method: string, data?: any, headers?: RequestInit): Promise<HttpResponse<T>> {
+    static async request<T = any>(url: string, method: string, data?: any, headers?: RequestInit): Promise<HttpResponse<T>> {
         try {
             const response = await fetch(url, {
                 method,
@@ -45,7 +45,7 @@ export default class HttpService {
     }
 
     static async put<T = any>(url: string, data: any, headers?: RequestInit): Promise<HttpResponse<T>> {
-        return await this.request(url, 'PUT', data, headers);
+        return await this.request<T>(url, 'PUT', data, headers);
     }
 
     static async delete(url: string, headers?: RequestInit): Promise<HttpResponse<null>> {

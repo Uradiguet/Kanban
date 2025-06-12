@@ -41,7 +41,14 @@ class Task(
 
     // AJOUT: Timestamps
     var createdAt: LocalDateTime = LocalDateTime.now(),
-    var updatedAt: LocalDateTime = LocalDateTime.now()
+    var updatedAt: LocalDateTime = LocalDateTime.now(),
+
+    // AJOUT: Relations de dépendance
+    @OneToMany(mappedBy = "dependentTask", fetch = FetchType.LAZY)
+    var dependencies: MutableList<Task> = mutableListOf(),
+
+    @ManyToOne
+    var dependentTask: fr.caensup.kanban.entities.Task? = null,
 )
 
 // AJOUT: Enum pour les priorités

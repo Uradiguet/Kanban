@@ -14,5 +14,8 @@ data class TaskDto(
     var boardId: UUID? = null,
     var assignedUsers: List<UUID>? = null,
     var createdAt: LocalDateTime? = null,
-    var updatedAt: LocalDateTime? = null
+    var updatedAt: LocalDateTime? = null,
+    var dependencies: List<UUID>? = null,
+    var dependentTasks: List<UUID>? = null,
+    var status: String? = null
 )

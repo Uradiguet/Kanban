@@ -70,4 +70,36 @@ class TaskController(private val taskService: TaskService) {
             ResponseEntity.badRequest().body("Erreur lors du déplacement: ${e.message}")
         }
     }
+
+    @PostMapping("/{sourceTaskId}/dependencies/{targetTaskId}")
+    fun addDependency(
+        @PathVariable sourceTaskId: UUID,
+        @PathVariable targetTaskId: UUID
+    ): ResponseEntity<Task> {
+        return try {
+            ResponseEntity.ok(taskService.addDependency(sourceTaskId, targetTaskId))
+        } catch (e: IllegalStateException) {
+            ResponseEntity.badRequest().build()
+        }
+    }
+
+    @DeleteMapping("/{sourceTaskId}/dependencies/{targetTaskId}")
+    fun removeDependency(
+        @PathVariable sourceTaskId: UUID,
+        @PathVariable targetTaskId: UUID
+    ): ResponseEntity<Task> {
+        return try {
+            ResponseEntity.ok(taskService.removeDependency(sourceTaskId, targetTaskId))
+        } catch (e: RuntimeException) {
+            ResponseEntity.notFound().build()
+        }
+    }
+
+    @GetMapping("/{id}/dependencies")
+    fun getDependencies(@PathVariable id: UUID): ResponseEntity<List<TaskDto>> {
+        return taskService.findById(id)?.let { task ->
+            ResponseEntity.ok(task.dependencies.map { taskService.taskToDto(it) })
+        } ?: ResponseEntity.notFound().build()
+    }
+
 }
